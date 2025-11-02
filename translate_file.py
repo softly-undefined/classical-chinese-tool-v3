@@ -122,32 +122,32 @@ def generate_txt(chinese_untranslated, english_translated, directory_path, aimod
 
 # Initializes appropriate API clients based on the selected model
 # TODO: Streamline this function / combine with translate function somehow?
-def initialize_clients(aimodel, openai_api_key=None, anthropic_api_key=None, gemini_api_key=None):
+def initialize_clients(aimodel, api_key=None):
 
     if ("gpt" in aimodel.lower() or aimodel.startswith("o")) and "gpt-oss" not in aimodel.lower():
         # OpenAI
-        if not openai_api_key or openai_api_key == "Paste OpenAI API key here":
+        if not api_key or api_key == "Paste OpenAI API key here":
             print("Paste your OpenAI API key in the designated area")
         else:
             if config.openai_client is None:
-                config.openai_client = OpenAITranslator(api_key=openai_api_key)
+                config.openai_client = OpenAITranslator(api_key=api_key)
 
     elif "claude" in aimodel.lower():
         # Anthropic
-        if not anthropic_api_key or anthropic_api_key == "Paste Anthropic API key here":
+        if not api_key or api_key == "Paste Anthropic API key here":
             print("Paste your Anthropic API key in the designated area")
         else:
             if config.anthropic_client is None:
-                config.anthropic_client = AnthropicTranslator(api_key=anthropic_api_key)
+                config.anthropic_client = AnthropicTranslator(api_key=api_key)
 
     elif "gemini" in aimodel.lower():
         # Gemini
-        if not gemini_api_key or gemini_api_key == "Paste Gemini API key here":
+        if not api_key or api_key == "Paste Gemini API key here":
             print("Paste your Gemini API key in the designated area")
         else:
             if config.gemini_client is None:
                 from translationmodels.gemini import GeminiTranslator
-                config.gemini_client = GeminiTranslator(api_key=gemini_api_key)
+                config.gemini_client = GeminiTranslator(api_key=api_key)
 
     elif "llama" in aimodel.lower():
         # Llama (local or API-based)
@@ -164,13 +164,13 @@ def initialize_clients(aimodel, openai_api_key=None, anthropic_api_key=None, gem
         if config.llama_client is None:
             config.llama_client = LlamaTranslator(model=aimodel)
 
-def translate_file(filepath, output_directory, aimodel, output_filepath_name="DEFAULT"):
+def translate_file(filepath, output_directory, aimodel, api_key, output_filepath_name="DEFAULT"):
     base_name = os.path.splitext(os.path.basename(filepath))[0]
 
     if output_filepath_name == "DEFAULT":
         output_filepath_name = f"{base_name}_translated"
 
-    initialize_clients(aimodel)
+    initialize_clients(aimodel, api_key)
 
     # 1. Chunking- This is conducted in chunking.py, and will result in translatable chunks.
     chunks = chunking.chunk_file(filepath)
@@ -180,8 +180,9 @@ def translate_file(filepath, output_directory, aimodel, output_filepath_name="DE
     # 3. TXT Generation- This will result in a saved txt file with the translated and untranslated chunks.
     generate_txt(untranslated_chunks, translated_chunks, output_directory, aimodel, output_filepath_name)
 
-# if __name__ == "__main__":
-#     FILEPATH = '中恶门.txt'
+# if __name__ == "__main__": # Example implementation
+#     FILEPATH = '古今图书集成博物汇编艺术典医部全录/中恶门.txt'
 #     DIRECTORY_PATH = 'translations_output'
-#     AI_MODEL = 'gemma3'
-#     translate_file(FILEPATH, DIRECTORY_PATH, AI_MODEL)
+#     AI_MODEL = 'gpt-4o-mini-2024-07-18'
+#     API_KEY = 'api key here'
+#     translate_file(FILEPATH, DIRECTORY_PATH, AI_MODEL, API_KEY)
