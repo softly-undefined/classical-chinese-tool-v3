@@ -4,5 +4,5 @@ This is the third version of a tool for translating long documents of Classical 
 
 ## Methodology
 
-
+Chunking logic can be found in the chunking.py file. The base idea is to create reasonably sized chunks of the original text, and then translate these chunks. A marker is then placed in the resulting English and original Chinese. 
 
