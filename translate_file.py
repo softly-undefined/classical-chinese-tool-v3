@@ -2,6 +2,8 @@
 # TODO: Add a translation harness system to avoid "The translation is..." etc. in outputs.
 # Use this for that ^ https://github.com/wmt-conference/wmt-collect-translations
 # TODO: How to account for Chinese translations in the output? (Maybe retranslate in these cases? Work on the prompt?)
+# TODO： Better Error Handling for API errors, output errors, etc.
+
 
 import chunking
 from tqdm import tqdm
@@ -110,13 +112,12 @@ def generate_txt(chinese_untranslated, english_translated, directory_path, aimod
                 file.write(zh_text + '[' + str(node_counter) + "p]" + '\n')
                 chinese_length += len(zh_text)
                 node_counter += 1
-        file.write("\n\n\n\nSummary Statistics\n")
-        file.write("\tTotal English characters: " + str(english_length))
-        file.write("\tTotal Chinese characters: " + str(chinese_length))
-        file.write("\tAverage English chunk length: " + str(round(sum(len(c) for c in english_translated) / len(english_translated), 2)) if english_translated else "0")
-        file.write("\tAverage Chinese chunk length: " + str(round(sum(len(c) for c in chinese_untranslated) / len(chinese_untranslated), 2)) if chinese_untranslated else "0")
-        file.write("\tTotal: " + str(chinese_length + english_length))
-        file.write(f"File saved to: {write_path}")
+            file.write("\n\n\n\nSummary Statistics\n")
+            file.write("\t\nTotal English characters: " + str(english_length))
+            file.write("\t\nTotal Chinese characters: " + str(chinese_length))
+            file.write("\t\nAverage English chunk length: " + str(round(sum(len(c) for c in english_translated) / len(english_translated), 2)) if english_translated else "0")
+            file.write("\t\nAverage Chinese chunk length: " + str(round(sum(len(c) for c in chinese_untranslated) / len(chinese_untranslated), 2)) if chinese_untranslated else "0")
+            file.write("\t\nTotal: " + str(chinese_length + english_length))
     else:
         print("Your file is probably empty or something! Figure this out")
 
