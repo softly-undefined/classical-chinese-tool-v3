@@ -13,7 +13,7 @@ class OpenAITranslator:
             response = self.client.responses.create(
                 model=model,
                 input=[
-                    {"role": "system", "content": "Translate the following Classical Chinese text to English with a focus on accuracy:"},
+                    {"role": "system", "content": "Translate the following Classical Chinese text to English. Include only the translated English text:"},
                     {"role": "user", "content": text}
                 ],
                 max_output_tokens=max_completion_tokens,

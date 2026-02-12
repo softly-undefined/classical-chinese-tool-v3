@@ -1,9 +1,11 @@
 # This file will take in a file, and return a super long string with markers throughout.
 # TODO: Add a translation harness system to avoid "The translation is..." etc. in outputs.
 # Use this for that ^ https://github.com/wmt-conference/wmt-collect-translations
+# Also influence from: https://openreview.net/pdf?id=yWl0agiI0y
 # TODO: How to account for Chinese translations in the output? (Maybe retranslate in these cases? Work on the prompt?)
 # TODO： Better Error Handling for API errors, output errors, etc.
 
+# Expand metadata at the bottom (time, person? etc.)
 
 import chunking
 from tqdm import tqdm
@@ -34,6 +36,7 @@ config = Config()
 # TODO: Update this to work more consistently with multiple AI models, and better with olllama models
 # TODO: Support HuggingFace models as well?
 def translate(text, aimodel):
+    hypothesis = ""
     if "gpt" in aimodel.lower() and "gpt-oss" not in aimodel.lower(): # Make an OPENAI api call
         if config.openai_client is None:
             print("Error: OpenAI client not initialized. Provide a valid API key.")
@@ -77,6 +80,7 @@ def translate_chunks(untranslated_chunks, aimodel):
             for chunk in untranslated_chunks:
                 translated_text = translate(chunk, aimodel)
                 translated_chunks.append(translated_text)
+                # print(translated_text) #REMOVE LATER
                 pbar.update(1)
 
     return untranslated_chunks, translated_chunks
@@ -182,8 +186,8 @@ def translate_file(filepath, output_directory, aimodel, api_key, output_filepath
     generate_txt(untranslated_chunks, translated_chunks, output_directory, aimodel, output_filepath_name)
 
 # if __name__ == "__main__": # Example implementation
-#     FILEPATH = '古今图书集成博物汇编艺术典医部全录/中恶门.txt'
-#     DIRECTORY_PATH = 'translations_output'
+#     FILEPATH = '古今图书集成博物汇编艺术典医部全录/test.txt'
+#     DIRECTORY_PATH = 'test_translated'
 #     AI_MODEL = 'gpt-4o-mini-2024-07-18'
-#     API_KEY = 'api key here'
+#    API_KEY
 #     translate_file(FILEPATH, DIRECTORY_PATH, AI_MODEL, API_KEY)
