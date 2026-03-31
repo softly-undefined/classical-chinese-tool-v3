@@ -1,6 +1,5 @@
 # This file handles the updated chunking logic. The logic is generally as follows (flow chart created by ChatGPT):
-# NOTE: currently the chunking logic is set for punctuated Classical Chinese texts.
-# TODO: Add a system to account for unpunctuated texts differently? / Analyze how it interacts with unpunctuated texts now. (It think it might work now)
+# NOTE: currently the chunking logic is set for punctuated Classical Chinese texts, with a backup for unpunctuated texts.
 #                 ┌───────────────────────────┐
 #                 │  Read input file (lines)  │
 #                 └─────────────┬─────────────┘
@@ -13,21 +12,28 @@
 #                   ┌──────────────┴──────────────┐
 #                   ▼                             ▼
 #       ┌─────────────────────────┐    ┌─────────────────────────┐
-#       │ Check if paragraph?     │    │ Not a paragraph →       │
-#       │ (≥ MIN size & ≥ 2 punc) │    │ keep as single chunk    │
+#       │ Any punctuation at all? │    │ No punctuation → split  │
+#       │ If yes, keep going      │    │ into equal backup chunks│
 #       └─────────────┬───────────┘    └─────────────────────────┘
 #                     │
 #       ┌─────────────┴───────────────┐
 #       ▼                             ▼
-# ┌────────────────────┐     ┌───────────────────────────────┐
-# │ Length ≤ MAX size? │     │ Length > MAX size → Split     │
-# │ Keep as one chunk  │     │ (find midpoint + nearest punc)│
-# └────────────────────┘     └───────────────────────────────┘
-#                                   │
-#                                   ▼
-#                    ┌─────────────────────────────┐
-#                    │ Recursively split if needed │
-#                    └─────────────────────────────┘
+# ┌────────────────────────────┐   ┌─────────────────────────┐
+# │ Check if paragraph?        │   │ Not a paragraph →       │
+# │ (≥ MIN size & ≥ 2 punc)    │   │ keep as single chunk    │
+# └─────────────┬──────────────┘   └─────────────────────────┘
+#               │
+#       ┌───────┴───────────────────┐
+#       ▼                           ▼
+# ┌────────────────────┐   ┌───────────────────────────────┐
+# │ Length ≤ MAX size? │   │ Length > MAX size → Split     │
+# │ Keep as one chunk  │   │ (find midpoint + nearest punc)│
+# └────────────────────┘   └───────────────────────────────┘
+#                                 │
+#                                 ▼
+#                  ┌─────────────────────────────┐
+#                  │ Recursively split if needed │
+#                  └─────────────────────────────┘
 
 # ----------------------------------------------------------
 
@@ -39,6 +45,13 @@
 #                 │ Second pass (bottom-up): │
 #                 │ Merge adjacent chunks if │
 #                 │ combined ≤ MAX_CHUNK_SIZE│
+#                 └─────────────┬─────────────┘
+#                               │
+#                               ▼
+#                 ┌───────────────────────────┐
+#                 │ Record chunk lengths      │
+#                 │ Split any chunk > 2x max  │
+#                 │ into equal backup chunks  │
 #                 └─────────────┬─────────────┘
 #                               │
 #                               ▼
@@ -63,6 +76,22 @@ def find_paragraph(line, min_chunk_size, max_chunk_size): #
             # we have found a paragraph!
             return True
     return False
+
+def split_into_equal_chunks(text, chunk_count):
+    if chunk_count <= 1:
+        return [text]
+
+    base_chunk_size = len(text) // chunk_count
+    remainder = len(text) % chunk_count
+
+    chunks = []
+    start = 0
+    for i in range(chunk_count):
+        extra = 1 if i < remainder else 0
+        end = start + base_chunk_size + extra
+        chunks.append(text[start:end])
+        start = end
+    return chunks
 
 # logic for splitting paragraphs which are longer than PARAGRAPH_SIZE
     # 1. Find length of the paragraph and divide by 2 to get the mid point
@@ -104,7 +133,11 @@ def chunk_file(filepath, min_chunk_size=128, max_chunk_size=384):
 
         new_chunks = []
         for line in chunks:
-            if find_paragraph(line, min_chunk_size, max_chunk_size):
+            if not any(p in line for p in PUNCTUATION):
+                backup_chunk_size = (min_chunk_size + max_chunk_size) // 2
+                chunk_count = max(1, (len(line) + backup_chunk_size - 1) // backup_chunk_size)
+                new_chunks.extend(split_into_equal_chunks(line, chunk_count))
+            elif find_paragraph(line, min_chunk_size, max_chunk_size):
                 # split_paragraph may return 1 or many pieces
                 new_chunks.extend(split_paragraph(line, min_chunk_size, max_chunk_size))
             else:
@@ -124,6 +157,17 @@ def chunk_file(filepath, min_chunk_size=128, max_chunk_size=384):
                 finalized_chunks.appendleft(merged_chunk)
             else:
                 finalized_chunks.appendleft(chunk)
+        chunk_lengths = [len(chunk) for chunk in finalized_chunks]
+        longest_chunk_size = max(chunk_lengths) if chunk_lengths else 0
+        if longest_chunk_size > (2 * max_chunk_size):
+            resized_chunks = deque()
+            for chunk, chunk_length in zip(finalized_chunks, chunk_lengths):
+                if chunk_length > (2 * max_chunk_size):
+                    chunk_count = (chunk_length + max_chunk_size - 1) // max_chunk_size
+                    resized_chunks.extend(split_into_equal_chunks(chunk, chunk_count))
+                else:
+                    resized_chunks.append(chunk)
+            finalized_chunks = resized_chunks
         # # Save finalized chunks to a new file (can be used to check chunk sizes)
         # with open('finalized_chunks.txt', 'w', encoding='utf-8') as finalfile:
         #     for i, chunk in enumerate(finalized_chunks):
